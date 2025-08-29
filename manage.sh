@@ -336,7 +336,8 @@ main() {
             *) echo -e "${RED}${CROSS} Invalid choice. Please select 1-8.${NC}" ;;
         esac
         
-        if [ "$choice" != "4" ] && [ "$choice" != "5" ]; then
+        # Always prompt to continue except for status (4) - even if operations fail
+        if [ "$choice" != "4" ]; then
             echo ""
             echo -n -e "${YELLOW}Press Enter to continue...${NC}"
             read
