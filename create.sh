@@ -141,53 +141,134 @@ while true; do
 done
 echo ""
 
-# 5. Show GPU usage and ask for selection
+# 5. Ask if user wants to use GPU
 echo -e "${ROCKET} ${BLUE}Step 4: GPU Configuration${NC}"
-echo -e "${PURPLE}┌──────────────────────────────────────────────────────────────┐${NC}"
-if command -v nvitop &> /dev/null; then
-    echo -e "${PURPLE}│${NC} ${GREEN}GPU Information (nvitop):${NC}                               ${PURPLE}│${NC}"
-    echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
-    nvitop --once
-elif command -v nvidia-smi &> /dev/null; then
-    echo -e "${PURPLE}│${NC} ${GREEN}GPU Information (nvidia-smi):${NC}                          ${PURPLE}│${NC}"
-    echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
-    nvidia-smi
-else
-    echo -e "${PURPLE}│${NC} ${YELLOW}⚠️  Neither nvitop nor nvidia-smi found${NC}                      ${PURPLE}│${NC}"
-    echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
-fi
 
-echo ""
 while true; do
-    echo -n -e "${CYAN}Enter GPU numbers (e.g., 0,1 or 'all'): ${NC}"
-    read GPU_INPUT
-    if [[ $GPU_INPUT == "all" ]]; then
-        GPU_NUMBER="all"
-        echo -e "${GREEN}${CHECK} Using all available GPUs${NC}"
+    echo -n -e "${CYAN}Do you want to use GPU acceleration? (y/N): ${NC}"
+    read gpu_choice
+    
+    if [[ $gpu_choice =~ ^[Yy]$ ]]; then
+        USE_GPU="yes"
+        echo -e "${GREEN}${CHECK} GPU acceleration enabled${NC}"
         break
-    elif [[ $GPU_INPUT =~ ^[0-9]+(,[0-9]+)*$ ]]; then
-        GPU_NUMBER="$GPU_INPUT"
-        echo -e "${GREEN}${CHECK} Using GPUs: ${GPU_NUMBER}${NC}"
+    elif [[ $gpu_choice =~ ^[Nn]$ ]] || [[ -z $gpu_choice ]]; then
+        USE_GPU="no"
+        GPU_NUMBER="none"
+        echo -e "${YELLOW}${ARROW} GPU acceleration disabled - using CPU only${NC}"
         break
     else
-        echo -e "${RED}${CROSS} Invalid GPU selection. Use format like '0,1' or 'all'.${NC}"
+        echo -e "${RED}${CROSS} Please enter 'y' for yes or 'n' for no${NC}"
     fi
 done
 echo ""
 
-# 6. Copy .env.setup to .env and update with user data
+# 6. If GPU enabled, show simple GPU info and selection
+if [[ $USE_GPU == "yes" ]]; then
+    echo -e "${PURPLE}┌──────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${PURPLE}│${NC} ${GREEN}GPU Summary${NC}                                              ${PURPLE}│${NC}"
+    echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
+    
+    # Function to get simple GPU summary
+    get_gpu_summary() {
+        if command -v nvidia-smi &> /dev/null; then
+            nvidia-smi --query-gpu=index,name,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits | while IFS=',' read -r id name util mem_used mem_total; do
+                # Clean up whitespace
+                id=$(echo $id | xargs)
+                name=$(echo $name | xargs)
+                util=$(echo $util | xargs)
+                mem_used=$(echo $mem_used | xargs)
+                mem_total=$(echo $mem_total | xargs)
+                
+                # Calculate memory percentage
+                if [[ $mem_total -gt 0 ]]; then
+                    mem_percent=$((mem_used * 100 / mem_total))
+                else
+                    mem_percent=0
+                fi
+                
+                # Status based on utilization
+                if [[ $util -gt 80 ]]; then
+                    status="${RED}BUSY${NC}"
+                elif [[ $util -gt 20 ]]; then
+                    status="${YELLOW}ACTIVE${NC}"
+                else
+                    status="${GREEN}FREE${NC}"
+                fi
+                
+                printf "GPU %-2s: %-20s [%s] Util: %2s%% Mem: %2s%%\n" "$id" "$name" "$status" "$util" "$mem_percent"
+            done
+        else
+            echo -e "${YELLOW}nvidia-smi not found - cannot detect GPUs${NC}"
+        fi
+    }
+    
+    get_gpu_summary
+    echo ""
+    
+    while true; do
+        echo -n -e "${CYAN}Enter GPU numbers (e.g., 0,1 or 'all'): ${NC}"
+        read GPU_INPUT
+        if [[ $GPU_INPUT == "all" ]]; then
+            GPU_NUMBER="all"
+            echo -e "${GREEN}${CHECK} Using all available GPUs${NC}"
+            break
+        elif [[ $GPU_INPUT =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+            GPU_NUMBER="$GPU_INPUT"
+            echo -e "${GREEN}${CHECK} Using GPUs: ${GPU_NUMBER}${NC}"
+            break
+        else
+            echo -e "${RED}${CROSS} Invalid GPU selection. Use format like '0,1' or 'all'.${NC}"
+        fi
+    done
+    echo ""
+fi
+
+# 7. Copy .env.setup to .env and update with user data
 echo -e "${GEAR} ${BLUE}Saving Configuration...${NC}"
 cp .env.setup .env
 sed -i "s/GPU_NUMBER=.*/GPU_NUMBER=$GPU_NUMBER/" .env
 sed -i "s/LIMIT_CPU=.*/LIMIT_CPU=$LIMIT_CPU/" .env
 sed -i "s/LIMIT_RAM=.*/LIMIT_RAM=$LIMIT_RAM/" .env
 echo "CUDA_VERSION=$CUDA_VERSION" >> .env
+echo "USE_GPU=$USE_GPU" >> .env
 
 echo -e "${GREEN}${CHECK} Configuration saved to .env${NC}"
 
-# 7. Update docker-compose.yaml container name
+# 8. Update docker-compose.yaml container name and GPU settings
 sed -i "s/container_name:.*/container_name: $CONTAINER_NAME/" docker-compose.yaml
-echo -e "${GREEN}${CHECK} Updated container name in docker-compose.yaml${NC}"
+
+# Configure GPU settings in docker-compose.yaml
+if [[ $USE_GPU == "no" ]]; then
+    # Remove GPU deployment section if it exists
+    if grep -q "devices:" docker-compose.yaml; then
+        # Remove the entire deploy section since we're only using it for GPU
+        sed -i '/deploy:/,/capabilities: \[gpu\]/d' docker-compose.yaml
+        echo -e "${YELLOW}${ARROW} Removed GPU configuration from docker-compose.yaml${NC}"
+    fi
+    # Update environment variables to remove CUDA references
+    sed -i '/CUDA_VISIBLE_DEVICES/d' docker-compose.yaml
+    sed -i '/NVIDIA_VISIBLE_DEVICES/d' docker-compose.yaml
+else
+    # Ensure GPU deployment section exists
+    if ! grep -q "devices:" docker-compose.yaml; then
+        # Add GPU deployment section if missing
+        cat >> docker-compose.yaml << EOF
+    deploy:
+      resources:
+        limits:
+          memory: \${LIMIT_RAM}
+          cpus: '\${LIMIT_CPU}'
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+EOF
+        echo -e "${GREEN}${CHECK} Added GPU configuration to docker-compose.yaml${NC}"
+    fi
+fi
+
+echo -e "${GREEN}${CHECK} Updated container configuration in docker-compose.yaml${NC}"
 
 echo ""
 echo -e "${PURPLE}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -196,12 +277,16 @@ echo -e "${PURPLE}╠═══════════════════�
 echo -e "${PURPLE}║${NC} Container: ${GREEN}$CONTAINER_NAME${NC}$(printf "%*s" $((51 - ${#CONTAINER_NAME})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}║${NC} CPU Limit: ${GREEN}$LIMIT_CPU cores${NC}$(printf "%*s" $((44 - ${#LIMIT_CPU})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}║${NC} RAM Limit: ${GREEN}$LIMIT_RAM${NC}$(printf "%*s" $((51 - ${#LIMIT_RAM})) "")${PURPLE}║${NC}"
-echo -e "${PURPLE}║${NC} CUDA Version: ${GREEN}$CUDA_VERSION${NC}$(printf "%*s" $((46 - ${#CUDA_VERSION})) "")${PURPLE}║${NC}"
-echo -e "${PURPLE}║${NC} GPUs: ${GREEN}$GPU_NUMBER${NC}$(printf "%*s" $((56 - ${#GPU_NUMBER})) "")${PURPLE}║${NC}"
+if [[ $USE_GPU == "yes" ]]; then
+    echo -e "${PURPLE}║${NC} CUDA Version: ${GREEN}$CUDA_VERSION${NC}$(printf "%*s" $((46 - ${#CUDA_VERSION})) "")${PURPLE}║${NC}"
+    echo -e "${PURPLE}║${NC} GPUs: ${GREEN}$GPU_NUMBER${NC}$(printf "%*s" $((56 - ${#GPU_NUMBER})) "")${PURPLE}║${NC}"
+else
+    echo -e "${PURPLE}║${NC} GPU Mode: ${YELLOW}CPU Only${NC}$(printf "%*s" 43 "")${PURPLE}║${NC}"
+fi
 echo -e "${PURPLE}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# 8. Start docker-compose (reads .env automatically)
+# 9. Start docker-compose (reads .env automatically)
 echo -e "${ROCKET} ${BLUE}Starting Docker Compose...${NC}"
 echo -e "${YELLOW}Building and starting container...${NC}"
 docker compose up --build -d
