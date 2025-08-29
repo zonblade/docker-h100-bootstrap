@@ -2,7 +2,7 @@ services:
   vulnerability-detector:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ${DOCKERFILE_NAME}
       args:
         CUDA_VERSION: ${CUDA_VERSION}
     container_name: empty

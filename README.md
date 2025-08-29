@@ -22,7 +22,8 @@ A containerized development environment with CUDA support, configurable resource
 - `create.sh` - Interactive setup script with colorful UI
 - `manage.sh` - Container management with start/stop/rebuild/logs
 - `docker-compose.yaml` - Container configuration with variable substitution
-- `Dockerfile` - CUDA-enabled Ubuntu 22.04 with Python 3.10
+- `Dockerfile.gpu` - CUDA-enabled Ubuntu 22.04 with Python 3.10
+- `Dockerfile.cpu` - CPU-only Ubuntu 22.04 with Python 3.10
 - `.env.setup` - Template for environment variables
 - `.env` - Generated configuration (created by create.sh)
 
@@ -30,10 +31,12 @@ A containerized development environment with CUDA support, configurable resource
 
 Environment variables in `.env`:
 ```bash
-GPU_NUMBER=0,1     # GPU IDs or "all"
+GPU_NUMBER=0,1     # GPU IDs or "all" (or "none" for CPU-only)
 LIMIT_CPU=4        # CPU cores
 LIMIT_RAM=8G       # Memory limit (G/M suffix required)
 CUDA_VERSION=12.4.0  # CUDA version for Docker image
+USE_GPU=yes        # "yes" or "no" for GPU acceleration
+DOCKERFILE_NAME=Dockerfile.gpu  # Auto-selected based on GPU choice
 ```
 
 ## Volumes
