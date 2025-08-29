@@ -321,6 +321,7 @@ else
           devices:
             - driver: nvidia
               capabilities: [gpu]
+    mem_swappiness: 0
 EOF
         echo -e "${GREEN}${CHECK} Added GPU configuration to docker-compose.yaml${NC}"
     fi
@@ -365,9 +366,9 @@ fi
 # Wait a moment for container to fully start
 sleep 2
 
-# Verify container is running
-local container_name=$(get_container_name)
-if ! container_running "$container_name"; then
+# Verify container is running  
+CONTAINER_NAME_CHECK=$(grep "container_name:" docker-compose.yaml | awk '{print $2}' | tr -d '"')
+if ! docker ps --format "table {{.Names}}" | grep -q "^${CONTAINER_NAME_CHECK}$" 2>/dev/null; then
     echo -e "${RED}${CROSS} Container failed to start properly${NC}"
     echo -e "${YELLOW}Container logs:${NC}"
     docker compose logs
