@@ -20,6 +20,13 @@ GEAR="⚙️"
 COMPUTER="💻"
 
 clear
+
+# Clean up any existing .env file from previous runs
+if [ -f ".env" ]; then
+    echo -e "${YELLOW}Removing previous .env configuration...${NC}"
+    rm -f .env
+fi
+
 echo -e "${PURPLE}╔══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${PURPLE}║                                                              ║${NC}"
 echo -e "${PURPLE}║           ${CYAN}Docker Development Workspace Setup${PURPLE}                ║${NC}"
@@ -228,14 +235,17 @@ else
     CUDA_VERSION="12.4.0"
 fi
 
-# 7. Copy .env.setup to .env and update with user data
+# 7. Create .env file with all configuration
 echo -e "${GEAR} ${BLUE}Saving Configuration...${NC}"
-cp .env.setup .env
-sed -i "s/GPU_NUMBER=.*/GPU_NUMBER=$GPU_NUMBER/" .env
-sed -i "s/LIMIT_CPU=.*/LIMIT_CPU=$LIMIT_CPU/" .env
-sed -i "s/LIMIT_RAM=.*/LIMIT_RAM=$LIMIT_RAM/" .env
-echo "CUDA_VERSION=$CUDA_VERSION" >> .env
-echo "USE_GPU=$USE_GPU" >> .env
+
+# Create clean .env file
+cat > .env << EOF
+GPU_NUMBER=$GPU_NUMBER
+LIMIT_CPU=$LIMIT_CPU
+LIMIT_RAM=$LIMIT_RAM
+CUDA_VERSION=$CUDA_VERSION
+USE_GPU=$USE_GPU
+EOF
 
 # Set dockerfile name based on GPU choice
 if [[ $USE_GPU == "yes" ]]; then
