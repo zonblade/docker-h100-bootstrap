@@ -117,8 +117,8 @@ if [[ $USE_GPU == "yes" ]]; then
             local driver_num=$((driver_major * 100 + driver_minor))
             
             if [ $driver_num -ge 545 ]; then
-                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.7${NC}" >&2
-                echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.6${NC}" >&2
+                echo "12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
             elif [ $driver_num -ge 530 ]; then
                 echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.5${NC}" >&2
                 echo "12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
@@ -131,7 +131,7 @@ if [[ $USE_GPU == "yes" ]]; then
             fi
         else
             echo -e "${YELLOW}nvidia-smi not found, showing all CUDA versions${NC}" >&2
-            echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+            echo "12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
         fi
     }
 
@@ -155,12 +155,12 @@ if [[ $USE_GPU == "yes" ]]; then
             CUDA_VERSION=$(echo "$supported_cuda" | awk '{print $1}')
             echo -e "${GREEN}${CHECK} Auto-selected CUDA: ${CUDA_VERSION}${NC}"
             break
-        elif [[ $cuda_input =~ ^12\.[0-7]\.0$ ]]; then
+        elif [[ $cuda_input =~ ^12\.[0-6]\.0$ ]]; then
             CUDA_VERSION="$cuda_input"
             echo -e "${GREEN}${CHECK} Selected CUDA: ${CUDA_VERSION}${NC}"
             break
         else
-            echo -e "${RED}${CROSS} Invalid CUDA version. Use format 12.X.0 (12.0.0 to 12.7.0) or 'auto'${NC}"
+            echo -e "${RED}${CROSS} Invalid CUDA version. Use format 12.X.0 (12.0.0 to 12.6.0) or 'auto'${NC}"
         fi
     done
     echo ""
