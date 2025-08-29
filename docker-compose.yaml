@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: ${DOCKERFILE_NAME}
     container_name: empty
+    user: "root"
     network_mode: "host"
     env_file:
       - .env
