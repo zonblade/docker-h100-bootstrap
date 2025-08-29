@@ -19,7 +19,7 @@
 # PREREQUISITES:
 #   - Docker and Docker Compose installed
 #   - Properly configured docker-compose.yaml
-#   - Environment file (.env) created by start.sh
+#   - Environment file (.env) created by create.sh
 #
 # USAGE:
 #   ./manage.sh                 # Interactive menu
@@ -120,7 +120,7 @@ show_status() {
         fi
     else
         echo -e "${PURPLE}│${NC} ${RED}${CROSS} No container found${NC}                                   ${PURPLE}│${NC}"
-        echo -e "${PURPLE}│${NC} ${YELLOW}Run ./start.sh to create container${NC}                      ${PURPLE}│${NC}"
+        echo -e "${PURPLE}│${NC} ${YELLOW}Run ./create.sh to create container${NC}                     ${PURPLE}│${NC}"
     fi
     
     echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
@@ -132,7 +132,7 @@ start_container() {
     echo -e "${PLAY} ${BLUE}Starting Container...${NC}"
     
     if [ ! -f ".env" ]; then
-        echo -e "${RED}${CROSS} No .env file found. Run ./start.sh first.${NC}"
+        echo -e "${RED}${CROSS} No .env file found. Run ./create.sh first.${NC}"
         return 1
     fi
     
