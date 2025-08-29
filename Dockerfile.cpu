@@ -22,5 +22,9 @@ RUN ln -sf /usr/bin/python3.10 /usr/bin/python && \
 # Set working directory
 WORKDIR /app
 
+# Create cache directories with proper permissions
+RUN mkdir -p /app/cache/{pip,tmp,torch,huggingface,transformers} && \
+    chmod -R 755 /app/cache
+
 # Set the startup command to bash for development workspace
 CMD ["/bin/bash"]
