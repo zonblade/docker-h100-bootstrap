@@ -251,6 +251,9 @@ EOF
 if [[ $USE_GPU == "yes" ]]; then
     echo "DOCKERFILE_NAME=Dockerfile.gpu" >> .env
     # Update CUDA version in Dockerfile.gpu
+    # First reset to placeholder if it was already replaced
+    sed -i "s/nvidia\/cuda:[0-9]\+\.[0-9]\+\.[0-9]\+-devel-ubuntu22.04/nvidia\/cuda:CUDA_VERSION_PLACEHOLDER-devel-ubuntu22.04/g" Dockerfile.gpu
+    # Then replace with selected version
     sed -i "s/CUDA_VERSION_PLACEHOLDER/$CUDA_VERSION/g" Dockerfile.gpu
     echo -e "${GREEN}${CHECK} Updated CUDA version in Dockerfile.gpu to ${CUDA_VERSION}${NC}"
 else
@@ -312,8 +315,9 @@ echo ""
 
 # 9. Start docker-compose (reads .env automatically)
 echo -e "${ROCKET} ${BLUE}Starting Docker Compose...${NC}"
-echo -e "${YELLOW}Building and starting container...${NC}"
-docker compose up --build -d
+echo -e "${YELLOW}Building and starting container (no cache)...${NC}"
+docker compose build --no-cache
+docker compose up -d
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
