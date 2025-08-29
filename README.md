@@ -60,7 +60,7 @@ DOCKERFILE_NAME=Dockerfile.gpu  # Auto-selected based on GPU choice
 
 ## Features
 
-- **Smart CUDA Version Selection** - Detects NVIDIA driver and suggests compatible CUDA versions (12.0-12.7)
+- **Smart CUDA Version Selection** - Detects NVIDIA driver and suggests compatible CUDA versions (12.0-12.6)
 - GPU support with configurable device selection
 - Resource limits (CPU/RAM) 
 - Host networking mode
