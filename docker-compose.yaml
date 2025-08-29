@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        CUDA_VERSION: ${CUDA_VERSION}
     container_name: empty
     network_mode: "host"
     env_file:

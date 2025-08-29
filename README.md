@@ -10,7 +10,8 @@ A containerized development environment with CUDA support, configurable resource
 ```
 
 **First time setup:**
-- `./create.sh` guides you through container naming, CPU/RAM limits, GPU selection
+- `./create.sh` guides you through container naming, CPU/RAM limits, CUDA version, GPU selection
+- Automatically detects your NVIDIA driver and suggests compatible CUDA versions
 - Container starts automatically after configuration
 
 **Daily usage:**
@@ -32,6 +33,7 @@ Environment variables in `.env`:
 GPU_NUMBER=0,1     # GPU IDs or "all"
 LIMIT_CPU=4        # CPU cores
 LIMIT_RAM=8G       # Memory limit (G/M suffix required)
+CUDA_VERSION=12.4.0  # CUDA version for Docker image
 ```
 
 ## Volumes
@@ -55,6 +57,7 @@ LIMIT_RAM=8G       # Memory limit (G/M suffix required)
 
 ## Features
 
+- **Smart CUDA Version Selection** - Detects NVIDIA driver and suggests compatible CUDA versions (12.0-12.7)
 - GPU support with configurable device selection
 - Resource limits (CPU/RAM) 
 - Host networking mode

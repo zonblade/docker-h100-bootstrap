@@ -79,8 +79,70 @@ while true; do
 done
 echo ""
 
-# 4. Show GPU usage and ask for selection
-echo -e "${ROCKET} ${BLUE}Step 3: GPU Configuration${NC}"
+# 4. Detect CUDA driver compatibility and ask for CUDA version
+echo -e "${ROCKET} ${BLUE}Step 3: CUDA Version Selection${NC}"
+
+# Function to get driver version and supported CUDA versions
+get_cuda_compatibility() {
+    if command -v nvidia-smi &> /dev/null; then
+        local driver_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits | head -1)
+        echo -e "${ARROW} NVIDIA Driver Version: ${YELLOW}${driver_version}${NC}"
+        
+        # Map driver versions to CUDA compatibility (simplified)
+        local driver_major=$(echo $driver_version | cut -d. -f1)
+        local driver_minor=$(echo $driver_version | cut -d. -f2)
+        local driver_num=$((driver_major * 100 + driver_minor))
+        
+        if [ $driver_num -ge 545 ]; then
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.7${NC}"
+            echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+        elif [ $driver_num -ge 530 ]; then
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.5${NC}"
+            echo "12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+        elif [ $driver_num -ge 520 ]; then
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.3${NC}"
+            echo "12.3.0 12.2.0 12.1.0 12.0.0"
+        else
+            echo -e "${YELLOW}+ Older driver, recommending CUDA 12.1.0${NC}"
+            echo "12.1.0"
+        fi
+    else
+        echo -e "${YELLOW}nvidia-smi not found, showing all CUDA versions${NC}"
+        echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+    fi
+}
+
+echo -e "${PURPLE}┌──────────────────────────────────────────────────────────────┐${NC}"
+echo -e "${PURPLE}│${NC} ${GREEN}Driver & CUDA Compatibility Check${NC}                          ${PURPLE}│${NC}"
+echo -e "${PURPLE}└──────────────────────────────────────────────────────────────┘${NC}"
+
+supported_cuda=$(get_cuda_compatibility)
+
+echo ""
+echo -e "${CYAN}Available CUDA versions for your system:${NC}"
+echo -e "${YELLOW}$supported_cuda${NC}"
+echo ""
+
+while true; do
+    echo -n -e "${CYAN}Enter CUDA version (e.g., 12.4.0) or 'auto' for recommended: ${NC}"
+    read cuda_input
+    
+    if [[ $cuda_input == "auto" ]]; then
+        CUDA_VERSION=$(echo $supported_cuda | awk '{print $1}')
+        echo -e "${GREEN}${CHECK} Auto-selected CUDA: ${CUDA_VERSION}${NC}"
+        break
+    elif [[ $cuda_input =~ ^12\.[0-7]\.0$ ]]; then
+        CUDA_VERSION="$cuda_input"
+        echo -e "${GREEN}${CHECK} Selected CUDA: ${CUDA_VERSION}${NC}"
+        break
+    else
+        echo -e "${RED}${CROSS} Invalid CUDA version. Use format 12.X.0 (12.0.0 to 12.7.0) or 'auto'${NC}"
+    fi
+done
+echo ""
+
+# 5. Show GPU usage and ask for selection
+echo -e "${ROCKET} ${BLUE}Step 4: GPU Configuration${NC}"
 echo -e "${PURPLE}┌──────────────────────────────────────────────────────────────┐${NC}"
 if command -v nvitop &> /dev/null; then
     echo -e "${PURPLE}│${NC} ${GREEN}GPU Information (nvitop):${NC}                               ${PURPLE}│${NC}"
@@ -113,16 +175,17 @@ while true; do
 done
 echo ""
 
-# 5. Copy .env.setup to .env and update with user data
+# 6. Copy .env.setup to .env and update with user data
 echo -e "${GEAR} ${BLUE}Saving Configuration...${NC}"
 cp .env.setup .env
 sed -i "s/GPU_NUMBER=.*/GPU_NUMBER=$GPU_NUMBER/" .env
 sed -i "s/LIMIT_CPU=.*/LIMIT_CPU=$LIMIT_CPU/" .env
 sed -i "s/LIMIT_RAM=.*/LIMIT_RAM=$LIMIT_RAM/" .env
+echo "CUDA_VERSION=$CUDA_VERSION" >> .env
 
 echo -e "${GREEN}${CHECK} Configuration saved to .env${NC}"
 
-# 6. Update docker-compose.yaml container name
+# 7. Update docker-compose.yaml container name
 sed -i "s/container_name:.*/container_name: $CONTAINER_NAME/" docker-compose.yaml
 echo -e "${GREEN}${CHECK} Updated container name in docker-compose.yaml${NC}"
 
@@ -133,11 +196,12 @@ echo -e "${PURPLE}╠═══════════════════�
 echo -e "${PURPLE}║${NC} Container: ${GREEN}$CONTAINER_NAME${NC}$(printf "%*s" $((51 - ${#CONTAINER_NAME})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}║${NC} CPU Limit: ${GREEN}$LIMIT_CPU cores${NC}$(printf "%*s" $((44 - ${#LIMIT_CPU})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}║${NC} RAM Limit: ${GREEN}$LIMIT_RAM${NC}$(printf "%*s" $((51 - ${#LIMIT_RAM})) "")${PURPLE}║${NC}"
+echo -e "${PURPLE}║${NC} CUDA Version: ${GREEN}$CUDA_VERSION${NC}$(printf "%*s" $((46 - ${#CUDA_VERSION})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}║${NC} GPUs: ${GREEN}$GPU_NUMBER${NC}$(printf "%*s" $((56 - ${#GPU_NUMBER})) "")${PURPLE}║${NC}"
 echo -e "${PURPLE}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# 7. Start docker-compose (reads .env automatically)
+# 8. Start docker-compose (reads .env automatically)
 echo -e "${ROCKET} ${BLUE}Starting Docker Compose...${NC}"
 echo -e "${YELLOW}Building and starting container...${NC}"
 docker compose up --build -d

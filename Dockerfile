@@ -1,5 +1,6 @@
 # Use NVIDIA CUDA base image with Python 3.10
-FROM nvidia/cuda:13.0.0-devel-ubuntu22.04
+ARG CUDA_VERSION=12.4.0
+FROM nvidia/cuda:${CUDA_VERSION}-devel-ubuntu22.04
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
