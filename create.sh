@@ -86,7 +86,7 @@ echo -e "${ROCKET} ${BLUE}Step 3: CUDA Version Selection${NC}"
 get_cuda_compatibility() {
     if command -v nvidia-smi &> /dev/null; then
         local driver_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits | head -1)
-        echo -e "${ARROW} NVIDIA Driver Version: ${YELLOW}${driver_version}${NC}"
+        echo -e "${ARROW} NVIDIA Driver Version: ${YELLOW}${driver_version}${NC}" >&2
         
         # Map driver versions to CUDA compatibility (simplified)
         local driver_major=$(echo $driver_version | cut -d. -f1)
@@ -94,20 +94,20 @@ get_cuda_compatibility() {
         local driver_num=$((driver_major * 100 + driver_minor))
         
         if [ $driver_num -ge 545 ]; then
-            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.7${NC}"
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.7${NC}" >&2
             echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
         elif [ $driver_num -ge 530 ]; then
-            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.5${NC}"
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.5${NC}" >&2
             echo "12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
         elif [ $driver_num -ge 520 ]; then
-            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.3${NC}"
+            echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.3${NC}" >&2
             echo "12.3.0 12.2.0 12.1.0 12.0.0"
         else
-            echo -e "${YELLOW}+ Older driver, recommending CUDA 12.1.0${NC}"
+            echo -e "${YELLOW}+ Older driver, recommending CUDA 12.1.0${NC}" >&2
             echo "12.1.0"
         fi
     else
-        echo -e "${YELLOW}nvidia-smi not found, showing all CUDA versions${NC}"
+        echo -e "${YELLOW}nvidia-smi not found, showing all CUDA versions${NC}" >&2
         echo "12.7.0 12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
     fi
 }
@@ -128,7 +128,8 @@ while true; do
     read cuda_input
     
     if [[ $cuda_input == "auto" ]]; then
-        CUDA_VERSION=$(echo $supported_cuda | awk '{print $1}')
+        # Get first version from the supported list
+        CUDA_VERSION=$(echo "$supported_cuda" | awk '{print $1}')
         echo -e "${GREEN}${CHECK} Auto-selected CUDA: ${CUDA_VERSION}${NC}"
         break
     elif [[ $cuda_input =~ ^12\.[0-7]\.0$ ]]; then
