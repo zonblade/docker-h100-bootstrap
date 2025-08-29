@@ -58,16 +58,16 @@ NC='\033[0m' # No Color
 CHECK="✓"
 CROSS="✗"
 ARROW="→"
-ROCKET="🚀"
-GEAR="⚙️"
-COMPUTER="💻"
-PLAY="▶️"
-STOP="⏹️"
-REFRESH="🔄"
-EYE="👁️"
-LOG="📋"
-TERMINAL="💻"
-TRASH="🗑️"
+ROCKET="*"
+GEAR="+"
+COMPUTER=">"
+PLAY=">"
+STOP="■"
+REFRESH="↻"
+EYE="*"
+LOG="="
+TERMINAL=">"
+TRASH="-"
 
 # Get container name from docker-compose.yaml
 get_container_name() {
@@ -112,12 +112,9 @@ show_status() {
         if container_running "$container_name"; then
             echo -e "${PURPLE}│${NC} ${GREEN}${CHECK} Container: ${container_name} (RUNNING)${NC}$(printf "%*s" $((25 - ${#container_name})) "")${PURPLE}│${NC}"
             
-            # Show resource usage if running
-            local cpu_usage=$(docker stats --no-stream --format "table {{.CPUPerc}}" "$container_name" 2>/dev/null | tail -n 1 | sed 's/%//')
-            local mem_usage=$(docker stats --no-stream --format "table {{.MemUsage}}" "$container_name" 2>/dev/null | tail -n 1)
-            
-            echo -e "${PURPLE}│${NC} ${CYAN}CPU Usage: ${YELLOW}${cpu_usage}%${NC}$(printf "%*s" $((43 - ${#cpu_usage})) "")${PURPLE}│${NC}"
-            echo -e "${PURPLE}│${NC} ${CYAN}Memory: ${YELLOW}${mem_usage}${NC}$(printf "%*s" $((51 - ${#mem_usage})) "")${PURPLE}│${NC}"
+            # Show status without stats for speed (async option)
+            echo -e "${PURPLE}│${NC} ${CYAN}Status: ${GREEN}Running${NC}$(printf "%*s" 37 "")${PURPLE}│${NC}"
+            echo -e "${PURPLE}│${NC} ${YELLOW}Use 'docker stats ${container_name}' for live stats${NC}$(printf "%*s" $((10 - ${#container_name})) "")${PURPLE}│${NC}"
         else
             echo -e "${PURPLE}│${NC} ${YELLOW}${GEAR} Container: ${container_name} (STOPPED)${NC}$(printf "%*s" $((24 - ${#container_name})) "")${PURPLE}│${NC}"
         fi
@@ -157,7 +154,7 @@ stop_container() {
     
     local container_name=$(get_container_name)
     if container_running "$container_name"; then
-        echo -e "${YELLOW}⚠️  Warning: This will stop the running container.${NC}"
+        echo -e "${YELLOW}Warning: This will stop the running container.${NC}"
         echo -e "${YELLOW}   Any unsaved work inside the container may be lost.${NC}"
         echo -n -e "${CYAN}Continue? (y/N): ${NC}"
         read confirm
@@ -183,7 +180,7 @@ stop_container() {
 rebuild_container() {
     echo -e "${REFRESH} ${BLUE}Rebuilding Container...${NC}"
     
-    echo -e "${RED}⚠️  DANGER: This will completely rebuild the container!${NC}"
+    echo -e "${RED}WARNING: This will completely rebuild the container!${NC}"
     echo -e "${YELLOW}   - Current container will be destroyed${NC}"
     echo -e "${YELLOW}   - All data inside the container will be lost${NC}"
     echo -e "${YELLOW}   - Only mounted volumes (./src, ./cache) will persist${NC}"
@@ -251,11 +248,11 @@ connect_container() {
 clean_resources() {
     echo -e "${TRASH} ${BLUE}Cleaning Project Resources...${NC}"
     
-    echo -e "${RED}⚠️  DANGER: This will remove all project resources!${NC}"
+    echo -e "${RED}WARNING: This will remove all project resources!${NC}"
     echo -e "${YELLOW}   - All containers from this project${NC}"
     echo -e "${YELLOW}   - All images built by this project${NC}"
     echo -e "${YELLOW}   - All volumes created by this project${NC}"
-    echo -e "${GREEN}   ✓ Your source code in ./src will be safe${NC}"
+    echo -e "${GREEN}   + Your source code in ./src will be safe${NC}"
     echo -n -e "${CYAN}Are you sure? Type 'clean' to continue: ${NC}"
     read confirm
     
