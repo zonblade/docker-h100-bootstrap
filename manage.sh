@@ -136,8 +136,8 @@ start_container() {
         return 1
     fi
     
-    echo -e "${YELLOW}Building and starting services...${NC}"
-    docker compose up --build -d
+    echo -e "${YELLOW}Starting services...${NC}"
+    docker compose up -d
     
     local container_name=$(get_container_name)
     if container_running "$container_name"; then
