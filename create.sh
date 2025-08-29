@@ -240,6 +240,9 @@ echo "USE_GPU=$USE_GPU" >> .env
 # Set dockerfile name based on GPU choice
 if [[ $USE_GPU == "yes" ]]; then
     echo "DOCKERFILE_NAME=Dockerfile.gpu" >> .env
+    # Update CUDA version in Dockerfile.gpu
+    sed -i "s/CUDA_VERSION_PLACEHOLDER/$CUDA_VERSION/g" Dockerfile.gpu
+    echo -e "${GREEN}${CHECK} Updated CUDA version in Dockerfile.gpu to ${CUDA_VERSION}${NC}"
 else
     echo "DOCKERFILE_NAME=Dockerfile.cpu" >> .env
 fi
