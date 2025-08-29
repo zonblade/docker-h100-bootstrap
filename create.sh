@@ -21,12 +21,6 @@ COMPUTER="💻"
 
 clear
 
-# Clean up any existing .env file from previous runs
-if [ -f ".env" ]; then
-    echo -e "${YELLOW}Removing previous .env configuration...${NC}"
-    rm -f .env
-fi
-
 echo -e "${PURPLE}╔══════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${PURPLE}║                                                              ║${NC}"
 echo -e "${PURPLE}║           ${CYAN}Docker Development Workspace Setup${PURPLE}                ║${NC}"
@@ -235,8 +229,19 @@ else
     CUDA_VERSION="12.4.0"
 fi
 
+# All questions completed successfully - now apply configuration
+echo ""
+echo -e "${GEAR} ${BLUE}All configuration collected! Applying changes...${NC}"
+echo ""
+
+# Clean up any existing .env file from previous runs
+if [ -f ".env" ]; then
+    echo -e "${YELLOW}${ARROW} Removing previous .env configuration...${NC}"
+    rm -f .env
+fi
+
 # 7. Create .env file with all configuration
-echo -e "${GEAR} ${BLUE}Saving Configuration...${NC}"
+echo -e "${GEAR} ${BLUE}Creating configuration files...${NC}"
 
 # Create clean .env file
 cat > .env << EOF
@@ -263,6 +268,7 @@ fi
 echo -e "${GREEN}${CHECK} Configuration saved to .env${NC}"
 
 # 8. Update docker-compose.yaml container name and GPU settings
+echo -e "${GEAR} ${BLUE}Updating docker-compose configuration...${NC}"
 sed -i "s/container_name:.*/container_name: $CONTAINER_NAME/" docker-compose.yaml
 
 # Configure GPU settings in docker-compose.yaml
@@ -325,5 +331,6 @@ echo -e "${GREEN}║                                                            
 echo -e "${GREEN}║  ${ROCKET} Container started successfully! ${ROCKET}                    ║${NC}"
 echo -e "${GREEN}║                                                              ║${NC}"
 echo -e "${GREEN}║  ${CYAN}To connect: ${YELLOW}docker exec -it $CONTAINER_NAME bash${GREEN}$(printf "%*s" $((20 - ${#CONTAINER_NAME})) "")║${NC}"
+echo -e "${GREEN}║  ${CYAN}To manage:  ${YELLOW}./manage.sh${GREEN}                               ║${NC}"
 echo -e "${GREEN}║                                                              ║${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
