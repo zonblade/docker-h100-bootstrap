@@ -112,27 +112,47 @@ if [[ $USE_GPU == "yes" ]]; then
             local driver_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits | head -1)
             echo -e "${ARROW} NVIDIA Driver Version: ${YELLOW}${driver_version}${NC}" >&2
             
-            # Map driver versions to CUDA compatibility (simplified)
+            # Get CUDA runtime version to determine actual compatibility
+            local cuda_runtime=""
+            if command -v nvidia-container-cli &> /dev/null; then
+                # Try to get CUDA runtime info
+                cuda_runtime=$(nvidia-container-cli info 2>/dev/null | grep "CUDA Version" | awk '{print $3}' | cut -d. -f1,2 || echo "")
+            fi
+            
+            # More accurate driver to CUDA mapping based on NVIDIA documentation
             local driver_major=$(echo $driver_version | cut -d. -f1)
             local driver_minor=$(echo $driver_version | cut -d. -f2)
-            local driver_num=$((driver_major * 100 + driver_minor))
+            local driver_num=$(echo $driver_version | cut -d. -f1,2 | tr -d .)
             
-            if [ $driver_num -ge 545 ]; then
+            # Conservative mapping based on actual NVIDIA compatibility
+            if (( driver_num >= 54540 )); then
                 echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.6${NC}" >&2
                 echo "12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
-            elif [ $driver_num -ge 530 ]; then
-                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.5${NC}" >&2
-                echo "12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
-            elif [ $driver_num -ge 520 ]; then
-                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.3${NC}" >&2
-                echo "12.3.0 12.2.0 12.1.0 12.0.0"
+            elif (( driver_num >= 53560 )); then
+                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.4${NC}" >&2
+                echo "12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+            elif (( driver_num >= 52560 )); then
+                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.2${NC}" >&2
+                echo "12.2.0 12.1.0 12.0.0"
+            elif (( driver_num >= 52010 )); then
+                echo -e "${GREEN}+ Supports CUDA: 12.0 - 12.1${NC}" >&2
+                echo "12.1.0 12.0.0"
+            elif (( driver_num >= 51560 )); then
+                echo -e "${GREEN}+ Supports CUDA: 12.0 only${NC}" >&2
+                echo "12.0.0"
             else
-                echo -e "${YELLOW}+ Older driver, recommending CUDA 12.1.0${NC}" >&2
-                echo "12.1.0"
+                echo -e "${YELLOW}+ Driver too old for CUDA 12.x, using 11.8${NC}" >&2
+                echo "11.8.0"
             fi
+            
+            # Show runtime info if available
+            if [[ -n "$cuda_runtime" ]]; then
+                echo -e "${CYAN}+ CUDA Runtime detected: ${cuda_runtime}${NC}" >&2
+            fi
+            
         else
-            echo -e "${YELLOW}nvidia-smi not found, showing all CUDA versions${NC}" >&2
-            echo "12.6.0 12.5.0 12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
+            echo -e "${YELLOW}nvidia-smi not found, showing conservative CUDA versions${NC}" >&2
+            echo "12.4.0 12.3.0 12.2.0 12.1.0 12.0.0"
         fi
     }
 
@@ -156,12 +176,17 @@ if [[ $USE_GPU == "yes" ]]; then
             CUDA_VERSION=$(echo "$supported_cuda" | awk '{print $1}')
             echo -e "${GREEN}${CHECK} Auto-selected CUDA: ${CUDA_VERSION}${NC}"
             break
-        elif [[ $cuda_input =~ ^12\.[0-6]\.0$ ]]; then
-            CUDA_VERSION="$cuda_input"
-            echo -e "${GREEN}${CHECK} Selected CUDA: ${CUDA_VERSION}${NC}"
-            break
+        elif [[ $cuda_input =~ ^1[12]\.[0-8]\.0$ ]]; then
+            # Check if the selected version is in the supported list
+            if echo "$supported_cuda" | grep -q "$cuda_input"; then
+                CUDA_VERSION="$cuda_input"
+                echo -e "${GREEN}${CHECK} Selected CUDA: ${CUDA_VERSION}${NC}"
+                break
+            else
+                echo -e "${RED}${CROSS} CUDA $cuda_input is not supported by your driver. Choose from: $supported_cuda${NC}"
+            fi
         else
-            echo -e "${RED}${CROSS} Invalid CUDA version. Use format 12.X.0 (12.0.0 to 12.6.0) or 'auto'${NC}"
+            echo -e "${RED}${CROSS} Invalid CUDA version format. Use 'auto' or select from supported versions.${NC}"
         fi
     done
     echo ""
@@ -322,8 +347,32 @@ echo ""
 # 9. Start docker-compose (reads .env automatically)
 echo -e "${ROCKET} ${BLUE}Starting Docker Compose...${NC}"
 echo -e "${YELLOW}Building and starting container (no cache)...${NC}"
-docker compose build --no-cache
-docker compose up -d
+
+# Build with timeout
+if ! timeout 300 docker compose build --no-cache; then
+    echo -e "${RED}${CROSS} Build failed or timed out after 5 minutes${NC}"
+    exit 1
+fi
+
+# Start with timeout
+if ! timeout 60 docker compose up -d; then
+    echo -e "${RED}${CROSS} Container startup failed or timed out after 1 minute${NC}"
+    echo -e "${YELLOW}Checking container logs...${NC}"
+    docker compose logs
+    exit 1
+fi
+
+# Wait a moment for container to fully start
+sleep 2
+
+# Verify container is running
+local container_name=$(get_container_name)
+if ! container_running "$container_name"; then
+    echo -e "${RED}${CROSS} Container failed to start properly${NC}"
+    echo -e "${YELLOW}Container logs:${NC}"
+    docker compose logs
+    exit 1
+fi
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
