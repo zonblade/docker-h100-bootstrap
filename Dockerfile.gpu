@@ -13,6 +13,13 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libssl-dev \
     libffi-dev \
+    nano \
+    vim \
+    htop \
+    tree \
+    zip \
+    unzip \
+    jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Create symbolic links for python

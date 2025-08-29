@@ -165,13 +165,42 @@ stop_container() {
         fi
     fi
     
-    docker compose down
+    docker compose stop
     
     local container_name=$(get_container_name)
     if ! container_running "$container_name"; then
         echo -e "${GREEN}${CHECK} Container stopped successfully!${NC}"
     else
         echo -e "${RED}${CROSS} Failed to stop container${NC}"
+        return 1
+    fi
+}
+
+# Remove container
+remove_container() {
+    echo -e "${TRASH} ${BLUE}Removing Container...${NC}"
+    
+    local container_name=$(get_container_name)
+    if container_exists "$container_name"; then
+        echo -e "${RED}WARNING: This will completely remove the container!${NC}"
+        echo -e "${YELLOW}   - All changes inside the container will be lost${NC}"
+        echo -e "${YELLOW}   - Only mounted volumes (./src, ./cache) will persist${NC}"
+        echo -n -e "${CYAN}Continue? (y/N): ${NC}"
+        read confirm
+        
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}Operation cancelled.${NC}"
+            return 0
+        fi
+    fi
+    
+    docker compose down
+    
+    local container_name=$(get_container_name)
+    if ! container_exists "$container_name"; then
+        echo -e "${GREEN}${CHECK} Container removed successfully!${NC}"
+    else
+        echo -e "${RED}${CROSS} Failed to remove container${NC}"
         return 1
     fi
 }
@@ -288,13 +317,14 @@ show_menu() {
     echo -e "${WHITE}Available Operations:${NC}"
     echo ""
     echo -e " ${PLAY}  ${CYAN}1)${NC} Start Container"
-    echo -e " ${STOP}  ${CYAN}2)${NC} Stop Container" 
-    echo -e " ${REFRESH}  ${CYAN}3)${NC} Rebuild Container"
-    echo -e " ${EYE}  ${CYAN}4)${NC} Show Status"
-    echo -e " ${LOG}  ${CYAN}5)${NC} View Logs"
-    echo -e " ${TERMINAL}  ${CYAN}6)${NC} Connect to Container"
-    echo -e " ${TRASH}  ${CYAN}7)${NC} Clean Project Resources"
-    echo -e " ${CROSS}  ${CYAN}8)${NC} Exit"
+    echo -e " ${STOP}  ${CYAN}2)${NC} Stop Container"
+    echo -e " ${TRASH}  ${CYAN}3)${NC} Remove Container"
+    echo -e " ${REFRESH}  ${CYAN}4)${NC} Rebuild Container"
+    echo -e " ${EYE}  ${CYAN}5)${NC} Show Status"
+    echo -e " ${LOG}  ${CYAN}6)${NC} View Logs"
+    echo -e " ${TERMINAL}  ${CYAN}7)${NC} Connect to Container"
+    echo -e " ${TRASH}  ${CYAN}8)${NC} Clean Project Resources"
+    echo -e " ${CROSS}  ${CYAN}9)${NC} Exit"
     echo ""
 }
 
@@ -304,6 +334,7 @@ main() {
     case "${1:-}" in
         "start") start_container; exit 0 ;;
         "stop") stop_container; exit 0 ;;
+        "remove") remove_container; exit 0 ;;
         "rebuild") rebuild_container; exit 0 ;;
         "status") show_header; show_status; exit 0 ;;
         "logs") view_logs; exit 0 ;;
@@ -317,24 +348,25 @@ main() {
         show_status
         show_menu
         
-        echo -n -e "${CYAN}Select operation (1-8): ${NC}"
+        echo -n -e "${CYAN}Select operation (1-9): ${NC}"
         read choice
         
         echo ""
         case $choice in
             1) start_container ;;
             2) stop_container ;;
-            3) rebuild_container ;;
-            4) continue ;;  # Status already shown
-            5) view_logs ;;
-            6) connect_container ;;
-            7) clean_resources ;;
-            8) echo -e "${GREEN}Goodbye!${NC}"; exit 0 ;;
-            *) echo -e "${RED}${CROSS} Invalid choice. Please select 1-8.${NC}" ;;
+            3) remove_container ;;
+            4) rebuild_container ;;
+            5) continue ;;  # Status already shown
+            6) view_logs ;;
+            7) connect_container ;;
+            8) clean_resources ;;
+            9) echo -e "${GREEN}Goodbye!${NC}"; exit 0 ;;
+            *) echo -e "${RED}${CROSS} Invalid choice. Please select 1-9.${NC}" ;;
         esac
         
-        # Always prompt to continue except for status (4) - even if operations fail
-        if [ "$choice" != "4" ]; then
+        # Always prompt to continue except for status (5) - even if operations fail
+        if [ "$choice" != "5" ]; then
             echo ""
             echo -n -e "${YELLOW}Press Enter to continue...${NC}"
             read
