@@ -1,0 +1,32 @@
+services:
+  vulnerability-detector:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: empty
+    network_mode: "host"
+    env_file:
+      - .env
+    environment:
+      - CUDA_VISIBLE_DEVICES=${GPU_NUMBER}
+      - NVIDIA_VISIBLE_DEVICES=${GPU_NUMBER}
+      - TMPDIR=/app/cache/tmp
+      - TORCH_HOME=/app/cache/torch
+      - HF_HOME=/app/cache/huggingface
+      - TRANSFORMERS_CACHE=/app/cache/transformers
+      - PIP_CACHE_DIR=/app/cache/pip
+    volumes:
+      - ./src:/app/src
+      - ./cache:/app/cache
+    deploy:
+      resources:
+        limits:
+          memory: ${LIMIT_RAM}
+          cpus: '${LIMIT_CPU}'
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    stdin_open: true
+    tty: true
+    restart: "no"
